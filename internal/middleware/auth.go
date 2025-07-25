@@ -1,103 +1,75 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
-	"github.com/company/microservice-template/internal/auth"
-	"github.com/gin-gonic/gin"
+	"it-auth-service/internal/logger"
+	"it-auth-service/pkg/firebase"
 )
 
-func JWTAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tokenString, err := jwtManager.ExtractTokenFromHeader(c)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    "UNAUTHORIZED",
-				"message": err.Error(),
-				"data":    nil,
-			})
-			c.Abort()
-			return
-		}
+type AuthMiddleware struct {
+	firebaseAuth *firebase.Auth
+}
 
-		claims, err := jwtManager.ValidateToken(tokenString)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    "INVALID_TOKEN",
-				"message": "Invalid or expired token",
-				"data":    nil,
-			})
-			c.Abort()
-			return
-		}
-
-		// Agregar claims al contexto
-		c.Set("user_id", claims.UserID)
-		c.Set("user_email", claims.Email)
-		c.Set("user_roles", claims.Roles)
-		c.Next()
+func NewAuthMiddleware(firebaseAuth *firebase.Auth) *AuthMiddleware {
+	return &AuthMiddleware{
+		firebaseAuth: firebaseAuth,
 	}
 }
 
-func RequireRole(requiredRole string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		roles, exists := c.Get("user_roles")
-		if !exists {
-			c.JSON(http.StatusForbidden, gin.H{
-				"code":    "FORBIDDEN",
-				"message": "User roles not found",
-				"data":    nil,
-			})
-			c.Abort()
+func (a *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Obtener token del header Authorization
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			logger.GetLogger().Warn("Missing Authorization header")
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
 			return
 		}
 
-		userRoles, ok := roles.([]string)
-		if !ok {
-			c.JSON(http.StatusForbidden, gin.H{
-				"code":    "FORBIDDEN",
-				"message": "Invalid user roles format",
-				"data":    nil,
-			})
-			c.Abort()
+		// Verificar formato Bearer token
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			logger.GetLogger().Warn("Invalid Authorization header format")
+			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
 			return
 		}
 
-		hasRole := false
-		for _, role := range userRoles {
-			if role == requiredRole {
-				hasRole = true
-				break
+		token := parts[1]
+
+		// Verificar token con Firebase
+		decodedToken, err := a.firebaseAuth.VerifyIDToken(context.Background(), token)
+		if err != nil {
+			logger.GetLogger().WithError(err).Warn("Invalid Firebase token")
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		// Agregar información del usuario al contexto
+		ctx := context.WithValue(r.Context(), "user_id", decodedToken.UID)
+		ctx = context.WithValue(ctx, "user_email", decodedToken.Claims["email"])
+		
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// Middleware opcional para endpoints públicos
+func (a *AuthMiddleware) OptionalAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				token := parts[1]
+				if decodedToken, err := a.firebaseAuth.VerifyIDToken(context.Background(), token); err == nil {
+					ctx := context.WithValue(r.Context(), "user_id", decodedToken.UID)
+					ctx = context.WithValue(ctx, "user_email", decodedToken.Claims["email"])
+					r = r.WithContext(ctx)
+				}
 			}
 		}
-
-		if !hasRole {
-			c.JSON(http.StatusForbidden, gin.H{
-				"code":    "INSUFFICIENT_PERMISSIONS",
-				"message": "Insufficient permissions for this resource",
-				"data":    nil,
-			})
-			c.Abort()
-			return
-		}
-
-		c.Next()
-	}
-}
-
-func SwaggerAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Solo permitir Swagger en desarrollo
-		if gin.Mode() == gin.ReleaseMode {
-			c.JSON(http.StatusNotFound, gin.H{
-				"code":    "NOT_FOUND",
-				"message": "Resource not found",
-				"data":    nil,
-			})
-			c.Abort()
-			return
-		}
-		c.Next()
-	}
+		next.ServeHTTP(w, r)
+	})
 }
