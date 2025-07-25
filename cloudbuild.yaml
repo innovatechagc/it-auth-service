@@ -3,17 +3,17 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
-      '-t', 'gcr.io/$PROJECT_ID/microservice-template:$COMMIT_SHA',
-      '-t', 'gcr.io/$PROJECT_ID/microservice-template:latest',
+      '-t', 'gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/it-auth-service:latest',
       '.'
     ]
 
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/microservice-template:$COMMIT_SHA']
+    args: ['push', 'gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA']
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/microservice-template:latest']
+    args: ['push', 'gcr.io/$PROJECT_ID/it-auth-service:latest']
 
   # Deploy to Cloud Run (staging)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -51,8 +51,8 @@ steps:
 
 # Store images in Container Registry
 images:
-  - 'gcr.io/$PROJECT_ID/microservice-template:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/microservice-template:latest'
+  - 'gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/it-auth-service:latest'
 
 # Build options
 options:

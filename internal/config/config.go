@@ -34,7 +34,7 @@ func LoadConfig() Config {
 		DBUser:            getEnv("DB_USER", "postgres"),
 		DBPassword:        getEnv("DB_PASSWORD", "postgres"),
 		DBName:            getEnv("DB_NAME", "itapp"),
-		Port:              getEnv("PORT", "8082"), // Puerto diferente para auth service
+		Port:              getEnv("PORT", "8080"), // Puerto para Cloud Run
 		FirebaseProjectID: getEnv("FIREBASE_PROJECT_ID", ""),
 		LogLevel:          getEnv("LOG_LEVEL", "info"),
 		Environment:       getEnv("ENVIRONMENT", "development"),

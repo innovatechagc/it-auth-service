@@ -58,11 +58,24 @@ func (s *Server) setupRoutes() {
 	// Crear middleware
 	authMiddleware := middleware.NewAuthMiddleware(s.firebaseAuth)
 
-	// Health check
+	// Health checks para Cloud Run
 	s.router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status": "ok", "service": "auth-service"}`))
+		w.Write([]byte(`{"status": "ok", "service": "it-auth-service"}`))
+	}).Methods("GET")
+	
+	s.router.HandleFunc("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status": "healthy", "service": "it-auth-service", "timestamp": "` + 
+			fmt.Sprintf("%d", 1234567890) + `"}`))
+	}).Methods("GET")
+	
+	s.router.HandleFunc("/api/v1/ready", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status": "ready", "service": "it-auth-service"}`))
 	}).Methods("GET")
 
 	// Rutas públicas de autenticación
