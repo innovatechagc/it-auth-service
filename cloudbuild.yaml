@@ -21,16 +21,8 @@ steps:
     args:
       - '-c'
       - |
-        echo "Original file content:"
-        cat deploy/cloudrun-staging.yaml
-        echo "---"
-        
         # Replace PROJECT_ID and COMMIT_SHA placeholders in staging config
-        sed -e 's/PROJECT_ID/$PROJECT_ID/g' -e 's/\$COMMIT_SHA/$COMMIT_SHA/g' deploy/cloudrun-staging.yaml > /tmp/cloudrun-staging.yaml
-        
-        echo "Generated file content:"
-        cat /tmp/cloudrun-staging.yaml
-        echo "---"
+        sed -e 's/PROJECT_ID/$PROJECT_ID/g' -e 's/COMMIT_SHA_PLACEHOLDER/$COMMIT_SHA/g' deploy/cloudrun-staging.yaml > /tmp/cloudrun-staging.yaml
         
         # Deploy to Cloud Run
         gcloud run services replace /tmp/cloudrun-staging.yaml \
@@ -46,7 +38,7 @@ steps:
         if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ] || [ -z "$BRANCH_NAME" ]; then
           echo "Deploying to production..."
           # Replace PROJECT_ID and COMMIT_SHA placeholders in production config
-          sed -e 's/PROJECT_ID/$PROJECT_ID/g' -e 's/\$COMMIT_SHA/$COMMIT_SHA/g' deploy/cloudrun-production.yaml > /tmp/cloudrun-production.yaml
+          sed -e 's/PROJECT_ID/$PROJECT_ID/g' -e 's/COMMIT_SHA_PLACEHOLDER/$COMMIT_SHA/g' deploy/cloudrun-production.yaml > /tmp/cloudrun-production.yaml
           
           # Deploy to Cloud Run
           gcloud run services replace /tmp/cloudrun-production.yaml \

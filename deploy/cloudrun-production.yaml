@@ -16,7 +16,7 @@ spec:
       containerConcurrency: 100
       timeoutSeconds: 300
       containers:
-      - image: gcr.io/PROJECT_ID/it-auth-service:$COMMIT_SHA
+      - image: gcr.io/PROJECT_ID/it-auth-service:COMMIT_SHA_PLACEHOLDER
         ports:
         - containerPort: 8080
         env:
