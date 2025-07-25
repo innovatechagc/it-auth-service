@@ -35,7 +35,8 @@ steps:
     args:
       - '-c'
       - |
-        if [ "$BRANCH_NAME" = "main" ]; then
+        if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ] || [ -z "$BRANCH_NAME" ]; then
+          echo "Deploying to production..."
           # Replace PROJECT_ID placeholder in production config
           sed 's/PROJECT_ID/$PROJECT_ID/g' deploy/cloudrun-production.yaml > /tmp/cloudrun-production.yaml
           
@@ -44,7 +45,8 @@ steps:
             --region=us-central1 \
             --platform=managed
         else
-          echo "Skipping production deployment - not on main branch"
+          echo "Skipping production deployment - branch: $BRANCH_NAME (not main/master)"
+          exit 0
         fi
 
 # Store images in Container Registry
@@ -62,4 +64,5 @@ timeout: '1200s'
 
 # Substitutions (variables)
 substitutions:
-  _REGION: 'us-central1'
+  _REGION: 'us-east1'
+  # _PROJECT_ID: '$PROJECT_ID'
