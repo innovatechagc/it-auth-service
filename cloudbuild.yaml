@@ -1,0 +1,65 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/$PROJECT_ID/microservice-template:$COMMIT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/microservice-template:latest',
+      '.'
+    ]
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/microservice-template:$COMMIT_SHA']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/microservice-template:latest']
+
+  # Deploy to Cloud Run (staging)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Replace PROJECT_ID placeholder in staging config
+        sed 's/PROJECT_ID/$PROJECT_ID/g' deploy/cloudrun-staging.yaml > /tmp/cloudrun-staging.yaml
+        
+        # Deploy to Cloud Run
+        gcloud run services replace /tmp/cloudrun-staging.yaml \
+          --region=us-central1 \
+          --platform=managed
+
+  # Deploy to Cloud Run (production) - only on main branch
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [ "$BRANCH_NAME" = "main" ]; then
+          # Replace PROJECT_ID placeholder in production config
+          sed 's/PROJECT_ID/$PROJECT_ID/g' deploy/cloudrun-production.yaml > /tmp/cloudrun-production.yaml
+          
+          # Deploy to Cloud Run
+          gcloud run services replace /tmp/cloudrun-production.yaml \
+            --region=us-central1 \
+            --platform=managed
+        else
+          echo "Skipping production deployment - not on main branch"
+        fi
+
+# Store images in Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/microservice-template:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/microservice-template:latest'
+
+# Build options
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+# Timeout for the entire build
+timeout: '1200s'
+
+# Substitutions (variables)
+substitutions:
+  _REGION: 'us-central1'
