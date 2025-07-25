@@ -19,6 +19,11 @@ vendor/
 .env
 .env.local
 
+# Credenciales de Firebase (NUNCA subir al repositorio)
+firebase-service-account.json
+*-service-account.json
+firebase-adminsdk-*.json
+
 # Logs
 *.log
 

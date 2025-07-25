@@ -80,7 +80,22 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-2024
 
 ### 3. Configurar Firebase
 
-Asegúrate de tener el archivo `firebase-service-account.json` en la raíz del proyecto con las credenciales de Firebase Admin SDK.
+**⚠️ IMPORTANTE: Nunca subas credenciales reales al repositorio**
+
+1. Copia el archivo de ejemplo:
+```bash
+cp firebase-service-account.json.example firebase-service-account.json
+```
+
+2. Edita `firebase-service-account.json` con tus credenciales reales de Firebase Admin SDK
+3. El archivo `firebase-service-account.json` está en `.gitignore` y NO se subirá al repositorio
+
+**Para obtener las credenciales de Firebase:**
+1. Ve a [Firebase Console](https://console.firebase.google.com/)
+2. Selecciona tu proyecto
+3. Ve a Configuración del proyecto > Cuentas de servicio
+4. Genera una nueva clave privada
+5. Descarga el archivo JSON y renómbralo a `firebase-service-account.json`
 
 ## 🚀 Desarrollo Local
 
