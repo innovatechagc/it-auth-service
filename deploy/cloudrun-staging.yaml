@@ -34,16 +34,6 @@ spec:
             secretKeyRef:
               key: latest
               name: it-chatbot-db-password
-        - name: VAULT_TOKEN
-          valueFrom:
-            secretKeyRef:
-              key: latest
-              name: vault-token-staging
-        - name: EXTERNAL_API_KEY
-          valueFrom:
-            secretKeyRef:
-              key: latest
-              name: external-api-key-staging
         resources:
           limits:
             cpu: "1"
