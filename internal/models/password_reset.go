@@ -30,8 +30,8 @@ type PasswordResetToken struct {
 	CreatedAt  time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt  time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 	
-	// Relación con User
-	User User `json:"user,omitempty" gorm:"foreignKey:UserID"`
+	// Relación con User (comentada porque User no tiene ID como primary key)
+	// User User `json:"user,omitempty" gorm:"foreignKey:UserID"`
 }
 
 type PasswordResetResponse struct {

@@ -2,29 +2,24 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/company/microservice-template/internal/domain"
-	"github.com/company/microservice-template/internal/middleware"
-	"github.com/company/microservice-template/internal/services"
-	"github.com/company/microservice-template/pkg/logger"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-type Handler struct {
-	healthService services.HealthService
-	logger        logger.Logger
+type Handler struct{}
+
+func NewHandler() *Handler {
+	return &Handler{}
 }
 
-func SetupRoutes(router *gin.Engine, healthService services.HealthService, logger logger.Logger) {
-	h := &Handler{
-		healthService: healthService,
-		logger:        logger,
-	}
+func SetupRoutes(router *gin.Engine) {
+	h := NewHandler()
 
-	// Swagger documentation (protegido en producción)
-	router.GET("/swagger/*any", middleware.SwaggerAuth(), ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Swagger documentation
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API routes
 	api := router.Group("/api/v1")
@@ -32,10 +27,6 @@ func SetupRoutes(router *gin.Engine, healthService services.HealthService, logge
 		// Health check
 		api.GET("/health", h.HealthCheck)
 		api.GET("/ready", h.ReadinessCheck)
-		
-		// Example routes (comentadas para testing)
-		// api.GET("/example", h.GetExample)
-		// api.POST("/example", h.CreateExample)
 	}
 }
 
@@ -48,12 +39,11 @@ func SetupRoutes(router *gin.Engine, healthService services.HealthService, logge
 // @Success 200 {object} map[string]interface{}
 // @Router /health [get]
 func (h *Handler) HealthCheck(c *gin.Context) {
-	status := h.healthService.CheckHealth()
-	
-	response := domain.APIResponse{
-		Code:    "SUCCESS",
-		Message: "Service is healthy",
-		Data:    status,
+	response := map[string]interface{}{
+		"status":    "ok",
+		"service":   "it-auth-service",
+		"timestamp": time.Now().UTC(),
+		"version":   "1.0.0",
 	}
 	
 	c.JSON(http.StatusOK, response)
@@ -68,23 +58,13 @@ func (h *Handler) HealthCheck(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Router /ready [get]
 func (h *Handler) ReadinessCheck(c *gin.Context) {
-	status := h.healthService.CheckReadiness()
-	
-	if status["ready"].(bool) {
-		response := domain.APIResponse{
-			Code:    "SUCCESS",
-			Message: "Service is ready",
-			Data:    status,
-		}
-		c.JSON(http.StatusOK, response)
-	} else {
-		response := domain.APIResponse{
-			Code:    "SERVICE_UNAVAILABLE",
-			Message: "Service is not ready",
-			Data:    status,
-		}
-		c.JSON(http.StatusServiceUnavailable, response)
+	response := map[string]interface{}{
+		"ready":     true,
+		"service":   "it-auth-service",
+		"timestamp": time.Now().UTC(),
 	}
+	
+	c.JSON(http.StatusOK, response)
 }
 
 // Ejemplo de handler comentado para testing

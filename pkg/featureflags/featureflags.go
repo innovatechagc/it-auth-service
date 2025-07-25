@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/company/microservice-template/pkg/logger"
+	"it-auth-service/pkg/logger"
 )
 
 // FeatureFlag representa una feature flag

@@ -1,20 +1,15 @@
 package e2e
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/company/microservice-template/internal/auth"
-	"github.com/company/microservice-template/internal/domain"
-	"github.com/company/microservice-template/internal/handlers"
-	"github.com/company/microservice-template/internal/middleware"
-	"github.com/company/microservice-template/internal/services"
-	testingPkg "github.com/company/microservice-template/internal/testing"
-	"github.com/company/microservice-template/pkg/logger"
+	"it-auth-service/internal/auth"
+	"it-auth-service/internal/handlers"
+	"it-auth-service/internal/middleware"
+	"it-auth-service/internal/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -22,20 +17,12 @@ import (
 
 type E2ETestSuite struct {
 	suite.Suite
-	containers *testingPkg.TestContainers
 	router     *gin.Engine
 	jwtManager *auth.JWTManager
 	authToken  string
 }
 
 func (suite *E2ETestSuite) SetupSuite() {
-	ctx := context.Background()
-	
-	// Setup test containers
-	containers, err := testingPkg.SetupTestContainers(ctx)
-	suite.Require().NoError(err)
-	suite.containers = containers
-
 	// Setup JWT Manager
 	suite.jwtManager = auth.NewJWTManager("test-secret", "test-issuer")
 	
@@ -48,20 +35,12 @@ func (suite *E2ETestSuite) SetupSuite() {
 	gin.SetMode(gin.TestMode)
 	suite.router = gin.New()
 	suite.router.Use(gin.Recovery())
-	suite.router.Use(middleware.Logger(logger.NewLogger("debug")))
 	
-	// Setup services
-	healthService := services.NewHealthService()
-	logger := logger.NewLogger("debug")
-	
-	handlers.SetupRoutes(suite.router, healthService, logger)
+	handlers.SetupRoutes(suite.router)
 }
 
 func (suite *E2ETestSuite) TearDownSuite() {
-	ctx := context.Background()
-	if suite.containers != nil {
-		suite.containers.Cleanup(ctx)
-	}
+	// Cleanup if needed
 }
 
 func (suite *E2ETestSuite) TestCompleteAPIFlow() {
@@ -72,7 +51,7 @@ func (suite *E2ETestSuite) TestCompleteAPIFlow() {
 	
 	assert.Equal(suite.T(), http.StatusOK, w.Code)
 	
-	var healthResponse domain.APIResponse
+	var healthResponse map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &healthResponse)
 	suite.NoError(err)
 

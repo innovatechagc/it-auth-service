@@ -172,7 +172,7 @@ func (h *TokenHandler) RevokeToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// En Firebase, podemos revocar todos los tokens de un usuario
-	err := h.firebaseAuth.RevokeRefreshTokens(context.Background(), userID.(string))
+	err = h.firebaseAuth.RevokeRefreshTokens(context.Background(), userID.(string))
 	if err != nil {
 		log.WithError(err).Error("Failed to revoke tokens")
 		http.Error(w, "Failed to revoke tokens", http.StatusInternalServerError)

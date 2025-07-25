@@ -17,6 +17,14 @@ type Config struct {
 	Environment       string
 	RateLimitRPS      int
 	RateLimitBurst    int
+	JWTSecret         string
+	VaultConfig       VaultConfig
+}
+
+type VaultConfig struct {
+	Address string
+	Token   string
+	Path    string
 }
 
 func LoadConfig() Config {
@@ -32,6 +40,12 @@ func LoadConfig() Config {
 		Environment:       getEnv("ENVIRONMENT", "development"),
 		RateLimitRPS:      getEnvAsInt("RATE_LIMIT_RPS", 100),
 		RateLimitBurst:    getEnvAsInt("RATE_LIMIT_BURST", 200),
+		JWTSecret:         getEnv("JWT_SECRET", "default-secret-change-in-production"),
+		VaultConfig: VaultConfig{
+			Address: getEnv("VAULT_ADDR", "http://localhost:8200"),
+			Token:   getEnv("VAULT_TOKEN", ""),
+			Path:    getEnv("VAULT_PATH", "secret/"),
+		},
 	}
 }
 

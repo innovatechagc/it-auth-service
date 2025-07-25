@@ -4,27 +4,47 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/company/microservice-template/internal/domain"
-	"github.com/company/microservice-template/pkg/logger"
+	"it-auth-service/internal/models"
+	"it-auth-service/pkg/logger"
 )
 
 type UserUseCase interface {
-	GetUser(ctx context.Context, id string) (*domain.User, error)
-	CreateUser(ctx context.Context, user *domain.User) error
-	UpdateUser(ctx context.Context, user *domain.User) error
+	GetUser(ctx context.Context, id string) (*models.User, error)
+	CreateUser(ctx context.Context, user *models.User) error
+	UpdateUser(ctx context.Context, user *models.User) error
 	DeleteUser(ctx context.Context, id string) error
-	ListUsers(ctx context.Context, limit, offset int) ([]*domain.User, error)
+	ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error)
+}
+
+type UserRepository interface {
+	GetByID(ctx context.Context, id string) (*models.User, error)
+	GetByEmail(ctx context.Context, email string) (*models.User, error)
+	Create(ctx context.Context, user *models.User) error
+	Update(ctx context.Context, user *models.User) error
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context, limit, offset int) ([]*models.User, error)
+}
+
+type AuditRepository interface {
+	Create(ctx context.Context, auditLog *AuditLog) error
+}
+
+type AuditLog struct {
+	UserID   string                 `json:"user_id"`
+	Action   string                 `json:"action"`
+	Resource string                 `json:"resource"`
+	Details  map[string]interface{} `json:"details"`
 }
 
 type userUseCase struct {
-	userRepo  domain.UserRepository
-	auditRepo domain.AuditRepository
+	userRepo  UserRepository
+	auditRepo AuditRepository
 	logger    logger.Logger
 }
 
 func NewUserUseCase(
-	userRepo domain.UserRepository,
-	auditRepo domain.AuditRepository,
+	userRepo UserRepository,
+	auditRepo AuditRepository,
 	logger logger.Logger,
 ) UserUseCase {
 	return &userUseCase{
@@ -34,7 +54,7 @@ func NewUserUseCase(
 	}
 }
 
-func (u *userUseCase) GetUser(ctx context.Context, id string) (*domain.User, error) {
+func (u *userUseCase) GetUser(ctx context.Context, id string) (*models.User, error) {
 	user, err := u.userRepo.GetByID(ctx, id)
 	if err != nil {
 		u.logger.Error("Failed to get user", "user_id", id, "error", err)
@@ -49,7 +69,7 @@ func (u *userUseCase) GetUser(ctx context.Context, id string) (*domain.User, err
 	return user, nil
 }
 
-func (u *userUseCase) CreateUser(ctx context.Context, user *domain.User) error {
+func (u *userUseCase) CreateUser(ctx context.Context, user *models.User) error {
 	// Validaciones de negocio
 	if user.Email == "" {
 		return fmt.Errorf("email is required")
@@ -77,7 +97,7 @@ func (u *userUseCase) CreateUser(ctx context.Context, user *domain.User) error {
 	return nil
 }
 
-func (u *userUseCase) UpdateUser(ctx context.Context, user *domain.User) error {
+func (u *userUseCase) UpdateUser(ctx context.Context, user *models.User) error {
 	// Verificar que el usuario existe
 	existingUser, err := u.userRepo.GetByID(ctx, user.ID)
 	if err != nil {
@@ -124,7 +144,7 @@ func (u *userUseCase) DeleteUser(ctx context.Context, id string) error {
 	return nil
 }
 
-func (u *userUseCase) ListUsers(ctx context.Context, limit, offset int) ([]*domain.User, error) {
+func (u *userUseCase) ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error) {
 	users, err := u.userRepo.List(ctx, limit, offset)
 	if err != nil {
 		u.logger.Error("Failed to list users", "error", err)
@@ -142,7 +162,7 @@ func (u *userUseCase) ListUsers(ctx context.Context, limit, offset int) ([]*doma
 }
 
 func (u *userUseCase) logAuditEvent(ctx context.Context, userID, action, resource string, details map[string]interface{}) {
-	auditLog := &domain.AuditLog{
+	auditLog := &AuditLog{
 		UserID:   userID,
 		Action:   action,
 		Resource: resource,

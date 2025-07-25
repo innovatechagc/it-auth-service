@@ -1,17 +1,18 @@
-# Template de Microservicio Go
+# Servicio de Autenticación IT-Auth-Service
 
-Template estandarizado para crear microservicios en Go que se despliegan en GCP Cloud Run. Incluye configuración para desarrollo local, testing, QA y producción.
+Microservicio de autenticación en Go que integra Firebase Auth, JWT y PostgreSQL. Diseñado para manejar autenticación, autorización y gestión de tokens de forma segura y escalable.
 
 ## 🚀 Características
 
-- **Framework**: Gin para HTTP server
-- **Logging**: Zap logger estructurado
-- **Métricas**: Prometheus integrado
-- **Secretos**: Integración con HashiCorp Vault
-- **Documentación**: Swagger/OpenAPI
+- **Autenticación**: Firebase Auth integrado
+- **JWT**: Manejo de tokens JWT personalizados
+- **Base de datos**: PostgreSQL con GORM
+- **Framework**: Gorilla Mux para HTTP routing
+- **Logging**: Logrus para logging estructurado
+- **Middleware**: Autenticación y CORS
+- **Validación**: Validación de requests con go-playground/validator
+- **Rate Limiting**: Control de tasa de requests
 - **Testing**: Tests unitarios y de integración
-- **Docker**: Multi-stage builds optimizados
-- **CI/CD**: Configuración para diferentes entornos
 
 ## 📁 Estructura del Proyecto
 
@@ -38,38 +39,48 @@ Template estandarizado para crear microservicios en Go que se despliegan en GCP 
 ### 1. Clonar y configurar el proyecto
 
 ```bash
-# Clonar el template
+# Clonar el repositorio
 git clone <repository-url>
-cd microservice-template
+cd it-auth-service
 
 # Copiar configuración de ejemplo
-cp .env.example .env.local
+cp .env.example .env
 
 # Instalar dependencias
-make deps
+go mod tidy
 ```
 
 ### 2. Configurar variables de entorno
 
-Edita `.env.local` con tus configuraciones:
+Edita `.env` con tus configuraciones:
 
 ```bash
-# Configuración básica
+# Auth Service Configuration
+PORT=8082
 ENVIRONMENT=development
-PORT=8080
 LOG_LEVEL=debug
 
-# Base de datos
+# Database Configuration (SHARED with it-app_user)
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=postgres
-DB_NAME=microservice_dev
+DB_NAME=itapp
 
-# Vault (comentado para desarrollo inicial)
-# VAULT_ADDR=http://localhost:8200
-# VAULT_TOKEN=dev-token
+# Firebase Configuration
+FIREBASE_PROJECT_ID=innovatech-agc
+
+# Rate Limiting
+RATE_LIMIT_RPS=100
+RATE_LIMIT_BURST=200
+
+# Security
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-2024
 ```
+
+### 3. Configurar Firebase
+
+Asegúrate de tener el archivo `firebase-service-account.json` en la raíz del proyecto con las credenciales de Firebase Admin SDK.
 
 ## 🚀 Desarrollo Local
 
@@ -77,11 +88,12 @@ DB_NAME=microservice_dev
 
 ```bash
 # Compilar y ejecutar
+go build -o bin/auth-service ./cmd
+./bin/auth-service
+
+# O usando make
 make build
 make run
-
-# O directamente
-go run .
 ```
 
 ### Opción 2: Con Docker Compose (Recomendado)
@@ -95,10 +107,20 @@ make docker-down
 ```
 
 Servicios disponibles:
-- **API**: http://localhost:8080
-- **Swagger**: http://localhost:8080/swagger/index.html
+- **Auth API**: http://localhost:8082
+- **PostgreSQL**: localhost:5432
 - **Prometheus**: http://localhost:9090
 - **Vault**: http://localhost:8200
+
+### Probar el servicio
+
+```bash
+# Ejecutar script de pruebas
+./test_endpoints.sh
+
+# O probar manualmente
+curl http://localhost:8082/health
+```
 
 ## 🧪 Testing
 
@@ -119,14 +141,49 @@ make lint
 ## 📊 Endpoints Disponibles
 
 ### Health Checks
-- `GET /api/v1/health` - Estado del servicio
-- `GET /api/v1/ready` - Readiness check
+- `GET /health` - Estado del servicio
 
-### Métricas
-- `GET /metrics` - Métricas de Prometheus
+### Endpoints Públicos de Autenticación
+- `POST /auth/login` - Login con Firebase ID token
+- `POST /auth/logout` - Logout del usuario
+- `GET /auth/status` - Verificar estado de autenticación
+- `POST /auth/refresh` - Refresh token
 
-### Documentación
-- `GET /swagger/index.html` - Documentación Swagger
+### Endpoints de Tokens
+- `POST /tokens/verify` - Verificar token de Firebase
+- `POST /tokens/validate` - Validar token
+- `POST /tokens/refresh` - Refresh token
+
+### Endpoints Protegidos (requieren autenticación)
+- `GET /auth/profile` - Obtener perfil del usuario
+- `POST /auth/revoke-tokens` - Revocar todos los tokens del usuario
+- `POST /tokens/revoke` - Revocar token específico
+- `POST /tokens/revoke-all` - Revocar todos los tokens
+- `POST /tokens/custom` - Crear token personalizado
+
+### Ejemplos de Uso
+
+```bash
+# Health check
+curl http://localhost:8082/health
+
+# Verificar estado de autenticación (sin token)
+curl http://localhost:8082/auth/status
+
+# Login con Firebase token
+curl -X POST http://localhost:8082/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"id_token": "your-firebase-id-token"}'
+
+# Verificar token
+curl -X POST http://localhost:8082/tokens/verify \
+  -H "Content-Type: application/json" \
+  -d '{"id_token": "your-firebase-id-token"}'
+
+# Acceder a endpoint protegido
+curl -X GET http://localhost:8082/auth/profile \
+  -H "Authorization: Bearer your-firebase-id-token"
+```
 
 ## 🔧 Configuración por Entornos
 

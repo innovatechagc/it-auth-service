@@ -5,8 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/company/microservice-template/internal/services"
-	"github.com/company/microservice-template/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,10 +14,7 @@ func TestHealthCheck(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	
-	healthService := services.NewHealthService()
-	logger := logger.NewLogger("debug")
-	
-	SetupRoutes(router, healthService, logger)
+	SetupRoutes(router)
 	
 	// Test
 	w := httptest.NewRecorder()
@@ -28,7 +23,7 @@ func TestHealthCheck(t *testing.T) {
 	
 	// Assertions
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "healthy")
+	assert.Contains(t, w.Body.String(), "ok")
 }
 
 func TestReadinessCheck(t *testing.T) {
@@ -36,10 +31,7 @@ func TestReadinessCheck(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	
-	healthService := services.NewHealthService()
-	logger := logger.NewLogger("debug")
-	
-	SetupRoutes(router, healthService, logger)
+	SetupRoutes(router)
 	
 	// Test
 	w := httptest.NewRecorder()
