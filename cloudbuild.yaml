@@ -1,39 +1,42 @@
 steps:
   # Build the container image
-  - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'build',
-      '-t', 'gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA',
-      '-t', 'gcr.io/$PROJECT_ID/it-auth-service:latest',
-      '.'
-    ]
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA",
+        "-t",
+        "gcr.io/$PROJECT_ID/it-auth-service:latest",
+        ".",
+      ]
 
   # Push the container image to Container Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA']
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA"]
 
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/it-auth-service:latest']
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/it-auth-service:latest"]
 
   # Deploy to Cloud Run (staging)
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
     args:
-      - '-c'
+      - "-c"
       - |
         # Replace PROJECT_ID and COMMIT_SHA placeholders in staging config
         sed -e 's/PROJECT_ID/$PROJECT_ID/g' -e 's/COMMIT_SHA_PLACEHOLDER/$COMMIT_SHA/g' deploy/cloudrun-staging.yaml > /tmp/cloudrun-staging.yaml
-        
+
         # Deploy to Cloud Run
         gcloud run services replace /tmp/cloudrun-staging.yaml \
-          --region=us-central1 \
+          --region=us-east1 \
           --platform=managed
 
   # Deploy to Cloud Run (production) - only on main branch
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
     args:
-      - '-c'
+      - "-c"
       - |
         if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ] || [ -z "$BRANCH_NAME" ]; then
           echo "Deploying to production..."
@@ -42,7 +45,7 @@ steps:
           
           # Deploy to Cloud Run
           gcloud run services replace /tmp/cloudrun-production.yaml \
-            --region=us-central1 \
+            --region=us-east1 \
             --platform=managed
         else
           echo "Skipping production deployment - branch: $BRANCH_NAME (not main/master)"
@@ -51,8 +54,8 @@ steps:
 
 # Store images in Container Registry
 images:
-  - 'gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/it-auth-service:latest'
+  - "gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA"
+  - "gcr.io/$PROJECT_ID/it-auth-service:latest"
 
 # Build options
 options:
@@ -60,9 +63,9 @@ options:
   # machineType: 'E2_HIGHCPU_8'
 
 # Timeout for the entire build
-timeout: '1200s'
+timeout: "1200s"
 
 # Substitutions (variables)
 substitutions:
-  _REGION: 'us-east1'
+  _REGION: "us-east1"
   # _PROJECT_ID: '$PROJECT_ID'
