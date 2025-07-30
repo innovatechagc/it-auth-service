@@ -30,7 +30,8 @@ steps:
         # Deploy to Cloud Run
         gcloud run services replace /tmp/cloudrun-staging.yaml \
           --region=us-east1 \
-          --platform=managed
+          --platform=managed \
+          --allow-unauthenticated
 
   # Deploy to Cloud Run (production) - only on main branch
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -46,7 +47,8 @@ steps:
           # Deploy to Cloud Run
           gcloud run services replace /tmp/cloudrun-production.yaml \
             --region=us-east1 \
-            --platform=managed
+            --platform=managed \
+          --allow-unauthenticated
         else
           echo "Skipping production deployment - branch: $BRANCH_NAME (not main/master)"
           exit 0
