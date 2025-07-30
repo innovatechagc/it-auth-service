@@ -24,14 +24,21 @@ steps:
     args:
       - "-c"
       - |
-        # Replace PROJECT_ID and COMMIT_SHA placeholders in staging config
-        sed -e 's/PROJECT_ID/$PROJECT_ID/g' -e 's/COMMIT_SHA_PLACEHOLDER/$COMMIT_SHA/g' deploy/cloudrun-staging.yaml > /tmp/cloudrun-staging.yaml
-
-        # Deploy to Cloud Run
-        gcloud run services replace /tmp/cloudrun-staging.yaml \
+        # Deploy to Cloud Run using gcloud run deploy
+        gcloud run deploy it-auth-service-staging \
+          --image=gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA \
           --region=us-central1 \
           --platform=managed \
-          --allow-unauthenticated
+          --allow-unauthenticated \
+          --port=8080 \
+          --set-env-vars="ENVIRONMENT=test,LOG_LEVEL=info" \
+          --set-secrets="JWT_SECRET=it-chatbot-jwt-password:latest,DB_PASSWORD=it-chatbot-db-password:latest" \
+          --cpu=0.5 \
+          --memory=256Mi \
+          --min-instances=1 \
+          --max-instances=10 \
+          --concurrency=100 \
+          --timeout=300
 
   # Deploy to Cloud Run (production) - only on main branch
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -41,14 +48,21 @@ steps:
       - |
         if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ] || [ -z "$BRANCH_NAME" ]; then
           echo "Deploying to production..."
-          # Replace PROJECT_ID and COMMIT_SHA placeholders in production config
-          sed -e 's/PROJECT_ID/$PROJECT_ID/g' -e 's/COMMIT_SHA_PLACEHOLDER/$COMMIT_SHA/g' deploy/cloudrun-production.yaml > /tmp/cloudrun-production.yaml
-          
-          # Deploy to Cloud Run
-          gcloud run services replace /tmp/cloudrun-production.yaml \
+          # Deploy to Cloud Run using gcloud run deploy
+          gcloud run deploy it-auth-service \
+            --image=gcr.io/$PROJECT_ID/it-auth-service:$COMMIT_SHA \
             --region=us-central1 \
             --platform=managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --port=8080 \
+            --set-env-vars="ENVIRONMENT=production,LOG_LEVEL=warn" \
+            --set-secrets="JWT_SECRET=it-chatbot-jwt-password:latest,DB_PASSWORD=it-chatbot-db-password:latest" \
+            --cpu=1 \
+            --memory=512Mi \
+            --min-instances=2 \
+            --max-instances=100 \
+            --concurrency=100 \
+            --timeout=300
         else
           echo "Skipping production deployment - branch: $BRANCH_NAME (not main/master)"
           exit 0
