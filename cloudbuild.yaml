@@ -48,7 +48,7 @@ steps:
           gcloud run services replace /tmp/cloudrun-production.yaml \
             --region=us-east1 \
             --platform=managed \
-          --allow-unauthenticated
+            --allow-unauthenticated
         else
           echo "Skipping production deployment - branch: $BRANCH_NAME (not main/master)"
           exit 0
