@@ -42,11 +42,14 @@ func AutoMigrate() error {
 		return fmt.Errorf("database connection not established")
 	}
 
-	// Migrar solo modelos específicos de autenticación
-	// Estas tablas son adicionales a las que ya existen en it-app_user
+	// Migrar modelos de autenticación
+	// Incluye la tabla de usuarios y tablas adicionales
 	err := DB.AutoMigrate(
+		&models.User{},
 		&models.EmailVerification{},
 		&models.PasswordResetToken{},
+		&models.RevokedToken{},
+		&models.UserSession{},
 	)
 
 	if err != nil {

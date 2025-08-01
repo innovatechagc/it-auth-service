@@ -26,7 +26,7 @@ func main() {
 	log.WithField("environment", cfg.Environment).WithField("port", cfg.Port).Info("Starting Auth Service")
 
 	// Crear servidor
-	srv, err := server.NewServer(cfg)
+	srv, err := server.NewServer(&cfg)
 	if err != nil {
 		log.WithError(err).Fatal("Error creating server")
 		os.Exit(1)

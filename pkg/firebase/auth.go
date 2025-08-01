@@ -112,3 +112,41 @@ func (a *Auth) DeleteUser(ctx context.Context, uid string) error {
 func (a *Auth) GetProjectID() string {
 	return a.projectID
 }
+
+// GetAuthClient obtiene un cliente de Firebase Auth usando las credenciales del entorno
+func GetAuthClient() (*auth.Client, error) {
+	ctx := context.Background()
+	
+	// Intentar usar las credenciales por defecto de Google Cloud
+	app, err := firebase.NewApp(ctx, &firebase.Config{
+		ProjectID: os.Getenv("FIREBASE_PROJECT_ID"),
+	})
+	
+	if err != nil {
+		// Si falla, intentar con el archivo de credenciales
+		serviceAccountPath := "firebase-service-account.json"
+		if path := os.Getenv("FIREBASE_SERVICE_ACCOUNT_PATH"); path != "" {
+			serviceAccountPath = path
+		}
+		
+		if _, err := os.Stat(serviceAccountPath); os.IsNotExist(err) {
+			return nil, fmt.Errorf("firebase credentials not found. Set GOOGLE_APPLICATION_CREDENTIALS or provide firebase-service-account.json")
+		}
+		
+		opt := option.WithCredentialsFile(serviceAccountPath)
+		app, err = firebase.NewApp(ctx, &firebase.Config{
+			ProjectID: os.Getenv("FIREBASE_PROJECT_ID"),
+		}, opt)
+		
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize Firebase app: %w", err)
+		}
+	}
+
+	client, err := app.Auth(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Firebase Auth client: %w", err)
+	}
+
+	return client, nil
+}
