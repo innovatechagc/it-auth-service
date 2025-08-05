@@ -28,7 +28,7 @@ type VaultConfig struct {
 }
 
 func LoadConfig() Config {
-	return Config{
+	config := Config{
 		DBHost:            getEnv("DB_HOST", "localhost"),
 		DBPort:            getEnv("DB_PORT", "5432"),
 		DBUser:            getEnv("DB_USER", "postgres"),
@@ -40,13 +40,20 @@ func LoadConfig() Config {
 		Environment:       getEnv("ENVIRONMENT", "development"),
 		RateLimitRPS:      getEnvAsInt("RATE_LIMIT_RPS", 100),
 		RateLimitBurst:    getEnvAsInt("RATE_LIMIT_BURST", 200),
-		JWTSecret:         getEnv("JWT_SECRET", "default-secret-change-in-production"),
+		JWTSecret:         getEnv("JWT_SECRET", ""),
 		VaultConfig: VaultConfig{
 			Address: getEnv("VAULT_ADDR", "http://localhost:8200"),
 			Token:   getEnv("VAULT_TOKEN", ""),
 			Path:    getEnv("VAULT_PATH", "secret/"),
 		},
 	}
+
+	// Validar JWT Secret en producción
+	if config.Environment == "production" && config.JWTSecret == "" {
+		panic("JWT_SECRET is required in production environment")
+	}
+
+	return config
 }
 
 func getEnv(key, defaultValue string) string {
