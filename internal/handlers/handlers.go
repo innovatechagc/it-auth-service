@@ -5,14 +5,15 @@ import (
 	"strconv"
 	"time"
 
+	"it-auth-service/internal/logger"
+	"it-auth-service/internal/models"
+	"it-auth-service/internal/services"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"it-auth-service/internal/logger"
-	"it-auth-service/internal/models"
-	"it-auth-service/internal/services"
 )
 
 type Handler struct {
@@ -79,7 +80,7 @@ func (h *Handler) HealthCheck(c *gin.Context) {
 		"timestamp": time.Now().UTC(),
 		"version":   "1.0.0",
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -97,7 +98,7 @@ func (h *Handler) ReadinessCheck(c *gin.Context) {
 		"service":   "it-auth-service",
 		"timestamp": time.Now().UTC(),
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -134,7 +135,7 @@ func (h *Handler) CreateExample(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Implementación de ejemplo
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Example created",
@@ -157,16 +158,16 @@ func (h *Handler) APIInfo(c *gin.Context) {
 		"version":     "1.0.0",
 		"description": "Servicio de autenticación con Firebase",
 		"endpoints": map[string]interface{}{
-			"health":           "/api/v1/health",
-			"ready":            "/api/v1/ready",
-			"firebase_login":   "/api/v1/auth/firebase-login",
+			"health":            "/api/v1/health",
+			"ready":             "/api/v1/ready",
+			"firebase_login":    "/api/v1/auth/firebase-login",
 			"firebase_register": "/api/v1/auth/firebase-register",
-			"refresh_token":    "/api/v1/auth/refresh-token",
-			"user_profile":     "/api/v1/users/profile",
+			"refresh_token":     "/api/v1/auth/refresh-token",
+			"user_profile":      "/api/v1/users/profile",
 		},
 		"timestamp": time.Now().UTC(),
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -184,7 +185,7 @@ func (h *Handler) APIInfo(c *gin.Context) {
 // @Router /auth/firebase-login [post]
 func (h *Handler) FirebaseLogin(c *gin.Context) {
 	var req models.FirebaseLoginRequest
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.WithError(err).Error("Invalid request body for Firebase login")
 		c.JSON(http.StatusBadRequest, models.APIResponse{
@@ -214,9 +215,9 @@ func (h *Handler) FirebaseLogin(c *gin.Context) {
 	}
 
 	h.logger.WithFields(map[string]interface{}{
-		"user_id":    authData.User.ID,
-		"email":      authData.User.Email,
-		"provider":   authData.User.Provider,
+		"user_id":     authData.User.ID,
+		"email":       authData.User.Email,
+		"provider":    authData.User.Provider,
 		"is_new_user": authData.IsNewUser,
 	}).Info("Firebase login successful")
 
@@ -240,7 +241,7 @@ func (h *Handler) FirebaseLogin(c *gin.Context) {
 // @Router /auth/firebase-register [post]
 func (h *Handler) FirebaseRegister(c *gin.Context) {
 	var req models.FirebaseRegisterRequest
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.WithError(err).Error("Invalid request body for Firebase register")
 		c.JSON(http.StatusBadRequest, models.APIResponse{
@@ -262,12 +263,12 @@ func (h *Handler) FirebaseRegister(c *gin.Context) {
 	authData, err := h.firebaseAuthService.FirebaseRegister(c.Request.Context(), &req)
 	if err != nil {
 		h.logger.WithError(err).Error("Firebase register failed")
-		
+
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "user already exists" {
 			statusCode = http.StatusConflict
 		}
-		
+
 		c.JSON(statusCode, models.APIResponse{
 			Success: false,
 			Error:   "Registration failed: " + err.Error(),
@@ -301,7 +302,7 @@ func (h *Handler) FirebaseRegister(c *gin.Context) {
 // @Router /auth/refresh-token [post]
 func (h *Handler) RefreshToken(c *gin.Context) {
 	var req models.FirebaseRefreshRequest
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.WithError(err).Error("Invalid request body for refresh token")
 		c.JSON(http.StatusBadRequest, models.APIResponse{
@@ -354,13 +355,21 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 // @Failure 500 {object} models.APIResponse
 // @Router /users/profile [get]
 func (h *Handler) GetUserProfile(c *gin.Context) {
-	// TODO: Implementar middleware de autenticación JWT
-	// Por ahora, simulamos obtener el user_id del token
-	userID := c.GetHeader("X-User-ID") // Temporal para testing
-	if userID == "" {
+	// Obtener user_id del contexto (establecido por el middleware JWT)
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
 		c.JSON(http.StatusUnauthorized, models.APIResponse{
 			Success: false,
 			Error:   "Authentication required",
+		})
+		return
+	}
+
+	userID, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, models.APIResponse{
+			Success: false,
+			Error:   "Invalid user ID format",
 		})
 		return
 	}
@@ -398,13 +407,21 @@ func (h *Handler) GetUserProfile(c *gin.Context) {
 // @Failure 500 {object} models.APIResponse
 // @Router /users/profile [put]
 func (h *Handler) UpdateUserProfile(c *gin.Context) {
-	// TODO: Implementar middleware de autenticación JWT
-	// Por ahora, simulamos obtener el user_id del token
-	userID := c.GetHeader("X-User-ID") // Temporal para testing
-	if userID == "" {
+	// Obtener user_id del contexto (establecido por el middleware JWT)
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
 		c.JSON(http.StatusUnauthorized, models.APIResponse{
 			Success: false,
 			Error:   "Authentication required",
+		})
+		return
+	}
+
+	userID, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, models.APIResponse{
+			Success: false,
+			Error:   "Invalid user ID format",
 		})
 		return
 	}
@@ -456,7 +473,26 @@ func (h *Handler) UpdateUserProfile(c *gin.Context) {
 // @Failure 500 {object} models.APIResponse
 // @Router /users [get]
 func (h *Handler) ListUsers(c *gin.Context) {
-	// TODO: Implementar middleware de autenticación y autorización
+	// Obtener user_id del contexto (establecido por el middleware JWT)
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.APIResponse{
+			Success: false,
+			Error:   "Authentication required",
+		})
+		return
+	}
+
+	userID, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, models.APIResponse{
+			Success: false,
+			Error:   "Invalid user ID format",
+		})
+		return
+	}
+
+	// TODO: Implementar verificación de roles/autorización
 	// Por ahora, simulamos la verificación de admin
 	isAdmin := c.GetHeader("X-Is-Admin") == "true" // Temporal para testing
 	if !isAdmin {
@@ -466,6 +502,9 @@ func (h *Handler) ListUsers(c *gin.Context) {
 		})
 		return
 	}
+
+	// Log del usuario que está listando usuarios
+	h.logger.WithField("user_id", userID).Info("User listing all users")
 
 	// Obtener parámetros de paginación
 	page := 1
@@ -498,9 +537,9 @@ func (h *Handler) ListUsers(c *gin.Context) {
 		Data: map[string]interface{}{
 			"users": users,
 			"pagination": map[string]interface{}{
-				"page":       page,
-				"limit":      limit,
-				"total":      total,
+				"page":        page,
+				"limit":       limit,
+				"total":       total,
 				"total_pages": (total + int64(limit) - 1) / int64(limit),
 			},
 		},
@@ -521,7 +560,7 @@ func (h *Handler) ListUsers(c *gin.Context) {
 // @Router /auth/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	var req models.LogoutRequest
-	
+
 	// El logout puede ser llamado sin body (solo con headers)
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// Si no hay body, está bien, solo logueamos que no se pudo parsear
